@@ -1,5 +1,9 @@
 package controller;
 
+import java.io.IOException;
+
+import messages.PanMessage;
+import networking.ConnectionManager;
 import view.OptionsPanel;
 import view.RotateControlPanel;
 import constants.Constants;
@@ -9,37 +13,47 @@ import enums.TargetInput;
 public class ActionManager
 {
    /**
-    * Carries out the appropriate actions for pan and tilt commands. Will eventually communicate
-    * with the ConnectionManager to deliver this information to a server hosted on the Pandaboard
+    * Carries out the appropriate actions for pan and tilt commands. Will
+    * eventually communicate with the ConnectionManager to deliver this
+    * information to a server hosted on the Pandaboard
     * 
-    * Information will be used to pan and tilt the servos connected to the turret apparatus.
+    * Information will be used to pan and tilt the servos connected to the
+    * turret apparatus.
     * 
-    * @param rotate RotateInput enum that was triggered
+    * @param rotate
+    *           RotateInput enum that was triggered
     */
    public static void handleRotateInput(RotateInput rotate)
    {
-      // Testing print statements. This information might be kept around in a log console.
-      System.out.print(rotate.name());
+      // Testing print statements. This information might be kept around in a
+      // log console.
       switch (rotate)
       {
          case UP:
          case DOWN:
-            System.out.println("\tTilting: [S - " + getSensitivity() + "] [D - " + getDegreesTilt() + "]");
             break;
          case RIGHT:
+            RemoteSentryClient.m_PositionPan += getDegreesPan() * 9.22;
+            break;
          case LEFT:
-            System.out.println("\tPanning: [S - " + getSensitivity() + "] [D - " + getDegreesPan() + "]");
+            RemoteSentryClient.m_PositionPan -= getDegreesPan() * 9.22;
             break;
          default:
-            throw new IllegalArgumentException(rotate + " is not a valid argument for the Rotation Handler.");
+            throw new IllegalArgumentException(rotate
+                  + " is not a valid argument for the Rotation Handler.");
       }
+
+      System.out.println("CLIENT: Moving to " + RemoteSentryClient.m_PositionPan);
+      updatePosition();
    }
 
    /**
-    * Carries out the appropriate actions for target source commands. Will eventually communicate
-    * with the ConnectionManager to deliver this information to a server hosted on the Pandaboard
+    * Carries out the appropriate actions for target source commands. Will
+    * eventually communicate with the ConnectionManager to deliver this
+    * information to a server hosted on the Pandaboard
     * 
-    * Information will be used to switch between remote operation and CV target acquisition
+    * Information will be used to switch between remote operation and CV target
+    * acquisition
     * 
     * @param target
     */
@@ -54,7 +68,7 @@ public class ActionManager
             RotateControlPanel.setRotationControlsEnabled(true);
             break;
       }
-      System.out.println(target.getLabelText());
+      System.out.println("CLIENT: " + target.getLabelText());
    }
 
    /**
@@ -85,5 +99,30 @@ public class ActionManager
    private static float getDegreesPan()
    {
       return getSensitivity() * Constants.DEGREES_PER_SENSITIVITY_PAN;
+   }
+
+   /**
+    * Updates the position of the servo based on the value of
+    * RemoteSentryClient.m_Position
+    */
+   private static void updatePosition()
+   {
+      // If we have surpassed the max value, clip
+      if (RemoteSentryClient.m_PositionPan > Constants.POSITION_PAN_MAX)
+         RemoteSentryClient.m_PositionPan = Constants.POSITION_PAN_MAX;
+
+      // If we have surpassed the min value, clip
+      if (RemoteSentryClient.m_PositionPan < Constants.POSITION_PAN_MIN)
+         RemoteSentryClient.m_PositionPan = Constants.POSITION_PAN_MIN;
+
+      try
+      {
+         ConnectionManager.sendMessage(new PanMessage(RemoteSentryClient.m_PositionPan));
+      }
+      catch (IOException e)
+      {
+         // Do nothing. Hopefully the keypress comes in again, and we update
+         // rapidly.
+      }
    }
 }

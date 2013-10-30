@@ -30,11 +30,11 @@ public class RotateControlPanel extends DisplayGenerator implements
          button.setMnemonic(direction.getKeyBinding());
          button.setActionCommand(direction.name());
          button.addActionListener(this);
-         
+
          m_Buttons.put(direction, button);
       }
    }
-   
+
    public static void setRotationControlsEnabled(boolean enabled)
    {
       for (RotateInput rotate : RotateInput.values())
